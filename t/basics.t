@@ -11,12 +11,19 @@ isa_ok(
 
 is($calc->push(10), 1, "one element on stack after push");
 is($calc->push( 5), 2, "two elements on stack after push");
-is($calc->add,     15, "10 + 5 = 15");
+is($calc->pop,      5, "popped the five off of the stack");
+is($calc->top,     10, "current top of stack is 10");
+is($calc->push( 5), 2, "two elements on stack after second push");
+is($calc->clear,    0, "stack emptied");
 
-is($calc->top,     15, "top element is now 15");
+is($calc->top,  undef, "empty stack");
+
+is($calc->push(1,5),2, "multi-item push");
+is($calc->add,      6, "1 + 6 = 6");
+
+is($calc->top,      6, "top element is now 6");
 
 is($calc->clear,    0, "stack emptied");
-is($calc->top,  undef, "empty stack");
 
 is($calc->push(10), 1, "one element on stack after push");
 is($calc->push( 5), 2, "two elements on stack after push");
@@ -54,3 +61,13 @@ is($calc->dupe,     3, "duplicate top value (again)");
 is($calc->push(3),  4, "four elements after push");
 is($calc->twiddle,  2, "twiddle top elements, 2 is on top");
 is($calc->twiddle,  3, "twiddle top elements, 3 is on top");
+
+is_deeply(
+	[ $calc->quorem ],
+	[ 0, 2 ],
+	"quorem of (2,3) is (0, 2)"
+);
+
+$calc->push(3);
+
+is($calc->divmod, 2, "scalar context divmod is 3");

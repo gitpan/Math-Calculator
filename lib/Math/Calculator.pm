@@ -1,11 +1,16 @@
 
 package Math::Calculator;
-our $VERSION = sprintf "%d.%03d", q$Revision: 1.2 $ =~ /(\d+)/g;
-
+$Math::Calculator::VERSION = '1.02';
 
 =head1 NAME
 
 Math::Calculator -- a multi-stack calculator class
+
+=head1 VERSION
+
+version 1.02
+
+ $Id: Calculator.pm,v 1.6 2005/03/06 03:09:16 rjbs Exp $
 
 =head1 SYNOPSIS
 
@@ -71,7 +76,7 @@ selected stack, if none is named.
 
 =cut
 
-sub stack { $_[0]->{stacks}->{$_[1] || $_[0]->current_stack} }
+sub stack { $_[0]->{stacks}->{$_[1] ? $_[1] : $_[0]->current_stack} }
 
 =item C<< top >>
 
@@ -90,22 +95,40 @@ This clears the current stack, setting it to C<()>.
 
 sub clear { @{(shift)->stack} = (); }
 
-=item C<< push(LIST) >>
+=item C<< push(@elements) >>
 
 C<push> pushes the given elements onto the stack in the order given.
+
+=item C<< push_to($stackname, @elements) >>
+
+C<push_to> is identical to C<push>, but pushes onto the named stack.
 
 =cut
 
 sub push { push @{(shift)->stack}, @_; }
+sub push_to { CORE::push @{(shift)->stack(shift)}, @_; }
 
 =item C<< pop($howmany) >>
 
 This method pops C<$howmany> elements off the current stack, or one element, if
 C<$howmany> is not defined.
 
+=item C<< pop_from($stackname, [ $howmany ]) >>
+
+C<pop_from> is identical to C<pop>, but pops from the named stack.
+
 =cut
 
-sub pop { splice @{$_[0]->stack}, (0 - (defined $_[1] ? $_[1] : 1)); }
+sub pop { splice @{$_[0]->stack}, - (defined $_[1] ? $_[1] : 1); }
+sub pop_from { splice @{$_[0]->stack($_[1])}, - (defined $_[2] ? $_[2] : 1); }
+
+=item C<< from_to($from_stack, $to_stack, [ $howmany ]) >>
+
+This pops a value from one stack and pushes it to another.
+
+=cut
+
+sub from_to { $_[0]->push_to($_[2], $_[0]->pop_from($_[1], $_[3])) }
 
 =item C<< dupe >>
 
@@ -124,9 +147,13 @@ elements, feeds them as parameters to the given coderef, and pushes the result.
 
 =cut
 
-sub _op_two { $_[0]->push( $_[1]->( $_[0]->pop(2) ) ); $_[0]->top;
-}
+# sub _op_two { $_[0]->push( $_[1]->( $_[0]->pop(2) ) ); $_[0]->top; }
 
+sub _op_two { ($_[0]->_op_n(2, $_[1]))[-1] }
+sub _op_n {
+	$_[0]->push(my @r = $_[2]->( $_[0]->pop($_[1]) ));
+	wantarray ? @r : $r[-1]
+}
 
 =item C<< twiddle >>
 
@@ -175,7 +202,7 @@ sub subtract { (shift)->_op_two( sub { (shift) - (shift) } ); }
 sub multiply { (shift)->_op_two( sub { (shift) * (shift) } ); }
 sub divide   { (shift)->_op_two( sub { (shift) / (shift) } ); }
 
-=item C<< divide >>
+=item C<< modulo >>
 
  x = pop; y = pop;
  push x % y;
@@ -209,8 +236,20 @@ root.
 sub modulo   { (shift)->_op_two( sub { (shift) % (shift) } ); }
 sub raise_to { (shift)->_op_two( sub { (shift) **(shift) } ); }
 sub root     { (shift)->_op_two( sub { (shift)**(1/(shift)) } ); }
-
 sub sqrt     { my ($self) = @_; $self->push(2); $self->root; }
+
+=item C<< quorem >>
+
+=item C<< divmod >>
+
+This method pops two values from the stack and divides them.  It pushes the
+integer part of the quotient, and then the remainder.
+
+=cut
+
+sub _quorem  { my ($n,$m) = @_; (int($n/$m), $n % $m) }
+sub quorem   { (shift)->_op_n(2, \&_quorem ); }
+sub divmod   { (shift)->_op_n(2, \&_quorem ); }
 
 =back
 
@@ -221,10 +260,18 @@ Math::RPN, writing a dc-alike, and possibly a simple Curses::UI interface.
 
 I want to add BigInt and BigFloat support for better precision.
 
-C<_op_two> needs to be refactored.
-
 I'd like to make Math::Calculator pluggable, so that extra operations can be
 added easily.
+
+=head1 SEE ALSO
+
+=over
+
+=item * L<Math::RPN>
+
+=item * L<Parse::RPN>
+
+=back
 
 =head1 AUTHORS
 
@@ -241,3 +288,4 @@ Math::Calculator is available under the same terms as Perl itself.
 =cut
 
 1;
+
